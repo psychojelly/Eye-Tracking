@@ -150,8 +150,8 @@
             GazeCursor.undim();
         }
 
-        // Apply head pose correction if active
-        if (HeadPoseTracker.isActive()) {
+        // Apply head pose correction only during live tracking
+        if (currentScreen === 'tracking' && HeadPoseTracker.isActive()) {
             var offset = HeadPoseTracker.getOffset();
             x += offset.x;
             y += offset.y;
