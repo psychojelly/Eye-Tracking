@@ -17,6 +17,8 @@
     const btnContinue = document.getElementById('btn-continue');
     const btnRecalibrateTracking = document.getElementById('btn-recalibrate-tracking');
     const btnToggleVideo = document.getElementById('btn-toggle-video');
+    const btnFlipVideo = document.getElementById('btn-flip-video');
+    const btnFlipTracking = document.getElementById('btn-flip-tracking');
     const accuracyInstruction = document.getElementById('accuracy-instruction');
     const accuracyResult = document.getElementById('accuracy-result');
     const accuracyValue = document.getElementById('accuracy-value');
@@ -279,6 +281,29 @@
     });
 
     btnToggleVideo.addEventListener('click', toggleVideo);
+
+    // ── Flip video (visual mirror) ──
+    let videoFlipped = false;
+    btnFlipVideo.addEventListener('click', function () {
+        videoFlipped = !videoFlipped;
+        var els = [
+            document.getElementById('webgazerVideoFeed'),
+            document.getElementById('webgazerVideoCanvas'),
+            document.getElementById('webgazerFaceOverlay'),
+        ];
+        for (var i = 0; i < els.length; i++) {
+            if (els[i]) els[i].style.transform = videoFlipped ? 'scaleX(-1)' : '';
+        }
+        btnFlipVideo.textContent = videoFlipped ? 'Flip Video (flipped)' : 'Flip Video';
+    });
+
+    // ── Flip head tracking X direction ──
+    btnFlipTracking.addEventListener('click', function () {
+        var sign = HeadPoseTracker.toggleFlipX();
+        btnFlipTracking.textContent = sign < 0
+            ? 'Flip Head Tracking (flipped)'
+            : 'Flip Head Tracking';
+    });
 
     window.addEventListener('resize', handleResize);
 

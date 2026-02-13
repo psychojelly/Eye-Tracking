@@ -45,6 +45,7 @@ const HeadPoseTracker = (function () {
     var smoothOffsetX = 0;
     var smoothOffsetY = 0;
     var active = false;
+    var flipX = 1; // 1 or -1
 
     /**
      * Capture the current head pose as the reference (call after calibration).
@@ -124,13 +125,9 @@ const HeadPoseTracker = (function () {
         yawShift = applyDeadZone(yawShift, DEAD_ZONE * 0.5);
         pitchShift = applyDeadZone(pitchShift, DEAD_ZONE * 0.5);
 
-        // Combine translation and rotation into a single offset
-        // Note: webcam mirrors X, so head moving right in video = head moving left.
-        // WebGazer's coordinate space already accounts for mirroring, so we
-        // apply the correction in the same direction as the detected shift.
-        // Webcam feed is mirrored, so X landmark movement is same direction as
-        // the user's head movement. Correction needs to follow, not oppose.
-        var rawOffsetX = transX * SENSITIVITY_X + yawShift * SENSITIVITY_YAW;
+        // Combine translation and rotation into a single offset.
+        // flipX allows the user to toggle the correction direction at runtime.
+        var rawOffsetX = flipX * (transX * SENSITIVITY_X + yawShift * SENSITIVITY_YAW);
         var rawOffsetY = -(transY * SENSITIVITY_Y + pitchShift * SENSITIVITY_PITCH);
 
         // EMA smooth the offset
@@ -193,5 +190,11 @@ const HeadPoseTracker = (function () {
         return value > 0 ? value - threshold : value + threshold;
     }
 
-    return { captureReference, getOffset, reset, isActive };
+    function toggleFlipX() {
+        flipX *= -1;
+        smoothOffsetX = 0; // reset smooth state so it doesn't lurch
+        return flipX;
+    }
+
+    return { captureReference, getOffset, reset, isActive, toggleFlipX };
 })();
