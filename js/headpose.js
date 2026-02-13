@@ -2,42 +2,32 @@
  * HeadPoseTracker — Tracks head position and rotation using FaceMesh landmarks
  * from WebGazer's tracker, computes gaze offset to compensate for head movement.
  *
- * Uses key facial landmarks to estimate:
- *   - Translation (X/Y shift relative to reference)
- *   - Rotation (yaw, pitch, roll via landmark geometry)
- *
- * The reference pose is captured once after calibration. During live tracking,
- * the current pose is compared to the reference and a pixel offset is returned
- * for gaze correction.
+ * Compensates for X/Y translation and yaw/pitch rotation.
+ * Z depth changes are handled by scaling the offset and optionally disabling
+ * correction when Z deviates too far from calibration range.
  */
 const HeadPoseTracker = (function () {
-    // Key FaceMesh landmark indices for head pose estimation
     const NOSE_TIP = 1;
-    const FOREHEAD = 10;
-    const CHIN = 152;
     const LEFT_EYE_OUTER = 33;
     const RIGHT_EYE_OUTER = 263;
-    const LEFT_EAR = 234;
-    const RIGHT_EAR = 454;
 
-    const LANDMARK_INDICES = [
-        NOSE_TIP, FOREHEAD, CHIN,
-        LEFT_EYE_OUTER, RIGHT_EYE_OUTER,
-        LEFT_EAR, RIGHT_EAR
-    ];
+    const LANDMARK_INDICES = [NOSE_TIP, LEFT_EYE_OUTER, RIGHT_EYE_OUTER];
 
-    // How aggressively head movement maps to gaze offset (px per px of head shift)
-    // These are tuned for a typical webcam-to-screen setup
+    // Sensitivity: px of gaze offset per px of landmark shift
     var SENSITIVITY_X = 2.0;
     var SENSITIVITY_Y = 1.5;
-    var SENSITIVITY_YAW = 3.0;   // px offset per px of yaw-induced landmark shift
-    var SENSITIVITY_PITCH = 2.0; // px offset per px of pitch-induced landmark shift
+    var SENSITIVITY_YAW = 3.0;
+    var SENSITIVITY_PITCH = 2.0;
 
-    // Dead zone: ignore head shifts smaller than this (in landmark px)
-    // Prevents micro-jitter from FaceMesh from creating constant small offsets
+    // Dead zone: ignore landmark jitter smaller than this (in px)
     var DEAD_ZONE = 2.0;
 
-    // EMA smoothing for the offset to avoid jitter
+    // Z depth: if scale deviates beyond this from calibrated range, fade out correction
+    // This is expanded if depth calibration was performed
+    var maxScaleDeviation = 0.15;
+    var depthCalibrated = false;
+
+    // EMA smoothing for the offset
     var SMOOTH_ALPHA = 0.2;
 
     // State
@@ -45,19 +35,14 @@ const HeadPoseTracker = (function () {
     var smoothOffsetX = 0;
     var smoothOffsetY = 0;
     var active = false;
-    var flipX = 1;  // 1 or -1
-    var flipY = 1;  // 1 or -1
+    var flipX = -1; // default flipped (mirrored webcam)
+    var flipY = 1;
 
-    /**
-     * Capture the current head pose as the reference (call after calibration).
-     * Returns true if successful, false if landmarks unavailable.
-     */
     function captureReference() {
         var landmarks = getCurrentLandmarks();
         if (!landmarks) return false;
 
         referencePose = {
-            landmarks: landmarks,
             interEyeDist: distance(
                 landmarks[LEFT_EYE_OUTER],
                 landmarks[RIGHT_EYE_OUTER]
@@ -76,10 +61,13 @@ const HeadPoseTracker = (function () {
     }
 
     /**
-     * Compute the gaze correction offset based on current head pose vs reference.
-     * Returns { x, y } offset in screen pixels to ADD to the raw gaze prediction.
-     * Returns { x: 0, y: 0 } if no reference or landmarks unavailable.
+     * Call after depth calibration to widen the accepted Z range.
      */
+    function markDepthCalibrated() {
+        depthCalibrated = true;
+        maxScaleDeviation = 0.35; // allow 35% deviation
+    }
+
     function getOffset() {
         if (!active || !referencePose) return { x: 0, y: 0 };
 
@@ -96,61 +84,66 @@ const HeadPoseTracker = (function () {
             landmarks[RIGHT_EYE_OUTER]
         );
 
-        // Scale factor to normalize for distance-to-camera changes
-        var scale = referencePose.interEyeDist > 0
+        // Z depth ratio: >1 = closer, <1 = farther
+        var scaleRatio = referencePose.interEyeDist > 0
             ? currentInterEyeDist / referencePose.interEyeDist
             : 1;
 
-        // --- Translation offset ---
-        // Nose tip shift (normalized by scale) indicates head translation
-        var transX = (currentNose[0] - referencePose.noseTip[0]) / scale;
-        var transY = (currentNose[1] - referencePose.noseTip[1]) / scale;
+        var scaleDev = Math.abs(scaleRatio - 1);
 
-        // --- Yaw estimation ---
-        // When the head rotates left/right, the nose shifts laterally relative
-        // to the eye center. This ratio indicates yaw.
+        // If beyond max range, fade correction to zero
+        if (scaleDev > maxScaleDeviation) {
+            smoothOffsetX *= 0.9;
+            smoothOffsetY *= 0.9;
+            return { x: smoothOffsetX, y: smoothOffsetY };
+        }
+
+        // Fade factor: full strength in dead zone center, fading at edges
+        var fadeFactor = 1;
+        if (scaleDev > maxScaleDeviation * 0.7) {
+            fadeFactor = 1 - (scaleDev - maxScaleDeviation * 0.7) / (maxScaleDeviation * 0.3);
+        }
+
+        // --- Translation (X/Y shift, normalized by scale for Z compensation) ---
+        var transX = (currentNose[0] - referencePose.noseTip[0]) / scaleRatio;
+        var transY = (currentNose[1] - referencePose.noseTip[1]) / scaleRatio;
+
+        // --- Yaw (nose lateral shift relative to eye center) ---
         var refNoseToEyeX = referencePose.noseTip[0] - referencePose.eyeCenter[0];
         var curNoseToEyeX = currentNose[0] - currentEyeCenter[0];
-        var yawShift = (curNoseToEyeX - refNoseToEyeX) / scale;
+        var yawShift = (curNoseToEyeX - refNoseToEyeX) / scaleRatio;
 
-        // --- Pitch estimation ---
-        // When the head tilts up/down, the nose shifts vertically relative
-        // to the eye center.
+        // --- Pitch (nose vertical shift relative to eye center) ---
         var refNoseToEyeY = referencePose.noseTip[1] - referencePose.eyeCenter[1];
         var curNoseToEyeY = currentNose[1] - currentEyeCenter[1];
-        var pitchShift = (curNoseToEyeY - refNoseToEyeY) / scale;
+        var pitchShift = (curNoseToEyeY - refNoseToEyeY) / scaleRatio;
 
-        // Apply dead zone — ignore small shifts that are just landmark noise
+        // Dead zone
         transX = applyDeadZone(transX, DEAD_ZONE);
         transY = applyDeadZone(transY, DEAD_ZONE);
         yawShift = applyDeadZone(yawShift, DEAD_ZONE * 0.5);
         pitchShift = applyDeadZone(pitchShift, DEAD_ZONE * 0.5);
 
-        // Combine translation and rotation into a single offset.
-        // flipX allows the user to toggle the correction direction at runtime.
-        var rawOffsetX = flipX * (transX * SENSITIVITY_X + yawShift * SENSITIVITY_YAW);
-        var rawOffsetY = flipY * (transY * SENSITIVITY_Y + pitchShift * SENSITIVITY_PITCH);
+        // Combine into offset with fade factor
+        var rawOffsetX = fadeFactor * flipX * (transX * SENSITIVITY_X + yawShift * SENSITIVITY_YAW);
+        var rawOffsetY = fadeFactor * flipY * (transY * SENSITIVITY_Y + pitchShift * SENSITIVITY_PITCH);
 
-        // EMA smooth the offset
+        // EMA smooth
         smoothOffsetX = smoothOffsetX + SMOOTH_ALPHA * (rawOffsetX - smoothOffsetX);
         smoothOffsetY = smoothOffsetY + SMOOTH_ALPHA * (rawOffsetY - smoothOffsetY);
 
         return { x: smoothOffsetX, y: smoothOffsetY };
     }
 
-    /**
-     * Stop tracking and clear reference.
-     */
     function reset() {
         referencePose = null;
         smoothOffsetX = 0;
         smoothOffsetY = 0;
         active = false;
+        depthCalibrated = false;
+        maxScaleDeviation = 0.15;
     }
 
-    /**
-     * Whether a reference pose has been captured and tracking is active.
-     */
     function isActive() {
         return active;
     }
@@ -162,8 +155,6 @@ const HeadPoseTracker = (function () {
             var tracker = webgazer.getTracker();
             var positions = tracker.getPositions();
             if (!positions || positions.length < 468) return null;
-
-            // Build a map of index → [x, y]
             var lm = {};
             for (var i = 0; i < LANDMARK_INDICES.length; i++) {
                 var idx = LANDMARK_INDICES[i];
@@ -187,7 +178,6 @@ const HeadPoseTracker = (function () {
 
     function applyDeadZone(value, threshold) {
         if (Math.abs(value) < threshold) return 0;
-        // Subtract threshold so the response starts at 0 past the dead zone
         return value > 0 ? value - threshold : value + threshold;
     }
 
@@ -203,5 +193,5 @@ const HeadPoseTracker = (function () {
         return flipY;
     }
 
-    return { captureReference, getOffset, reset, isActive, toggleFlipX, toggleFlipY };
+    return { captureReference, getOffset, reset, isActive, toggleFlipX, toggleFlipY, markDepthCalibrated };
 })();

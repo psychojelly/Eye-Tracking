@@ -6,6 +6,7 @@
     const screens = {
         welcome: document.getElementById('screen-welcome'),
         calibration: document.getElementById('screen-calibration'),
+        depthCal: document.getElementById('screen-depth-cal'),
         accuracy: document.getElementById('screen-accuracy'),
         tracking: document.getElementById('screen-tracking'),
     };
@@ -34,6 +35,7 @@
     const settingGridLabel = document.getElementById('setting-grid-label');
     const settingClicks = document.getElementById('setting-clicks');
     const settingClicksLabel = document.getElementById('setting-clicks-label');
+    const settingDepth = document.getElementById('setting-depth');
 
     let currentScreen = 'welcome';
     let nullGazeTimer = null;
@@ -134,6 +136,9 @@
             webgazer.showFaceOverlay(true);
             webgazer.showFaceFeedbackBox(true);
 
+            // Apply default video flip
+            applyVideoFlip();
+
             // Transition to calibration
             startCalibration();
         } catch (err) {
@@ -205,10 +210,179 @@
         Calibration.reset();
         Calibration.createPoints();
         Calibration.setOnComplete(function () {
-            // Capture head pose reference right after calibration completes
             HeadPoseTracker.captureReference();
-            startAccuracyTest();
+            if (settingDepth.checked) {
+                startDepthCalibration();
+            } else {
+                startAccuracyTest();
+            }
         });
+    }
+
+    // ── Depth calibration flow ──
+    var depthCalState = null;
+    var depthDistanceInterval = null;
+    var depthRefInterEyeDist = null;
+
+    // 5 positions: center + 4 corners
+    var DEPTH_POSITIONS = [
+        { x: 0.5, y: 0.5 },
+        { x: 0.15, y: 0.15 },
+        { x: 0.85, y: 0.15 },
+        { x: 0.15, y: 0.85 },
+        { x: 0.85, y: 0.85 },
+    ];
+    var DEPTH_CLICKS_PER_DISTANCE = 3;
+    // Phases: closer, farther
+    var DEPTH_PHASES = ['closer', 'farther'];
+
+    function startDepthCalibration() {
+        showScreen('depthCal');
+        setVideoVisible(true); // Show video so user can see themselves leaning
+        applyVideoFlip();
+        GazeCursor.hide();
+
+        // Capture reference distance for the indicator
+        depthRefInterEyeDist = getInterEyeDist();
+
+        depthCalState = {
+            posIndex: 0,
+            phaseIndex: 0,
+            clicks: 0,
+            totalSteps: DEPTH_POSITIONS.length * DEPTH_PHASES.length,
+            currentStep: 0,
+        };
+
+        showDepthPoint();
+        startDepthDistanceHud();
+    }
+
+    function showDepthPoint() {
+        var container = document.getElementById('depth-cal-container');
+        var instruction = document.getElementById('depth-cal-instruction');
+        var progress = document.getElementById('depth-cal-progress');
+        container.innerHTML = '';
+
+        var pos = DEPTH_POSITIONS[depthCalState.posIndex];
+        var phase = DEPTH_PHASES[depthCalState.phaseIndex];
+
+        if (phase === 'closer') {
+            instruction.textContent = 'Lean CLOSER to the screen and click the point ' + DEPTH_CLICKS_PER_DISTANCE + ' times';
+        } else {
+            instruction.textContent = 'Lean FARTHER from the screen and click the point ' + DEPTH_CLICKS_PER_DISTANCE + ' times';
+        }
+
+        depthCalState.currentStep = depthCalState.posIndex * DEPTH_PHASES.length + depthCalState.phaseIndex;
+        progress.textContent = (depthCalState.currentStep + 1) + ' / ' + depthCalState.totalSteps + ' steps';
+
+        var pt = document.createElement('div');
+        pt.className = 'calibration-point depth-cal-point';
+        pt.style.left = (pos.x * 100) + '%';
+        pt.style.top = (pos.y * 100) + '%';
+        pt.style.background = phase === 'closer' ? '#ff9944' : '#44aaff';
+        pt.style.width = '36px';
+        pt.style.height = '36px';
+
+        pt.addEventListener('click', function () {
+            handleDepthClick(pt);
+        });
+
+        container.appendChild(pt);
+    }
+
+    function handleDepthClick(pt) {
+        depthCalState.clicks++;
+
+        // Visual feedback
+        var frac = depthCalState.clicks / DEPTH_CLICKS_PER_DISTANCE;
+        if (frac >= 1) {
+            pt.style.background = '#33cc33';
+            pt.style.pointerEvents = 'none';
+            pt.style.opacity = '0.6';
+        } else {
+            var phase = DEPTH_PHASES[depthCalState.phaseIndex];
+            if (phase === 'closer') {
+                pt.style.background = frac > 0.5 ? '#ccaa33' : '#ff9944';
+            } else {
+                pt.style.background = frac > 0.5 ? '#44bb88' : '#44aaff';
+            }
+        }
+
+        if (depthCalState.clicks >= DEPTH_CLICKS_PER_DISTANCE) {
+            // Move to next phase or position
+            depthCalState.clicks = 0;
+            depthCalState.phaseIndex++;
+
+            if (depthCalState.phaseIndex >= DEPTH_PHASES.length) {
+                depthCalState.phaseIndex = 0;
+                depthCalState.posIndex++;
+
+                if (depthCalState.posIndex >= DEPTH_POSITIONS.length) {
+                    // Depth calibration complete
+                    finishDepthCalibration();
+                    return;
+                }
+            }
+
+            setTimeout(showDepthPoint, 300);
+        }
+    }
+
+    function finishDepthCalibration() {
+        stopDepthDistanceHud();
+        // Re-capture reference at normal sitting distance, mark Z range as trained
+        HeadPoseTracker.captureReference();
+        HeadPoseTracker.markDepthCalibrated();
+        startAccuracyTest();
+    }
+
+    function getInterEyeDist() {
+        try {
+            var tracker = webgazer.getTracker();
+            var positions = tracker.getPositions();
+            if (!positions || positions.length < 468) return null;
+            var l = positions[33]; // left eye outer
+            var r = positions[263]; // right eye outer
+            var dx = l[0] - r[0];
+            var dy = l[1] - r[1];
+            return Math.sqrt(dx * dx + dy * dy);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function startDepthDistanceHud() {
+        var label = document.getElementById('depth-distance-label');
+        var fill = document.getElementById('depth-bar-fill');
+        var marker = document.getElementById('depth-bar-marker');
+
+        depthDistanceInterval = setInterval(function () {
+            var dist = getInterEyeDist();
+            if (dist === null || depthRefInterEyeDist === null) return;
+
+            // Ratio: >1 means closer, <1 means farther
+            var ratio = dist / depthRefInterEyeDist;
+            // Map to 0-100 range: 0.7 ratio = 0%, 1.0 = 50%, 1.3 = 100%
+            var pct = Math.max(0, Math.min(100, ((ratio - 0.7) / 0.6) * 100));
+
+            if (ratio > 1.05) {
+                label.textContent = 'Distance: Closer';
+            } else if (ratio < 0.95) {
+                label.textContent = 'Distance: Farther';
+            } else {
+                label.textContent = 'Distance: Normal';
+            }
+
+            fill.style.width = pct + '%';
+            marker.style.left = '50%'; // normal position marker
+        }, 100);
+    }
+
+    function stopDepthDistanceHud() {
+        if (depthDistanceInterval) {
+            clearInterval(depthDistanceInterval);
+            depthDistanceInterval = null;
+        }
     }
 
     // ── Accuracy test flow ──
@@ -283,10 +457,9 @@
 
     btnToggleVideo.addEventListener('click', toggleVideo);
 
-    // ── Flip video (visual mirror) ──
-    let videoFlipped = false;
-    btnFlipVideo.addEventListener('click', function () {
-        videoFlipped = !videoFlipped;
+    // ── Flip video (visual mirror) — default: flipped ──
+    let videoFlipped = true;
+    function applyVideoFlip() {
         var els = [
             document.getElementById('webgazerVideoFeed'),
             document.getElementById('webgazerVideoCanvas'),
@@ -296,9 +469,15 @@
             if (els[i]) els[i].style.transform = videoFlipped ? 'scaleX(-1)' : '';
         }
         btnFlipVideo.textContent = videoFlipped ? 'Flip Video (flipped)' : 'Flip Video';
+    }
+    btnFlipVideo.addEventListener('click', function () {
+        videoFlipped = !videoFlipped;
+        applyVideoFlip();
     });
 
-    // ── Flip head tracking axes ──
+    // ── Flip head tracking axes ── (X defaults to flipped in headpose.js)
+    btnFlipTrackingX.textContent = 'Flip Tracking X (flipped)';
+
     btnFlipTrackingX.addEventListener('click', function () {
         var sign = HeadPoseTracker.toggleFlipX();
         btnFlipTrackingX.textContent = sign < 0 ? 'Flip Tracking X (flipped)' : 'Flip Tracking X';

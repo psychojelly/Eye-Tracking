@@ -39,6 +39,13 @@
                         <span id="setting-clicks-label" class="setting-value">5</span>
                     </div>
                 </div>
+                <div class="setting-row">
+                    <label for="setting-depth">Depth calibration</label>
+                    <div class="setting-control">
+                        <input type="checkbox" id="setting-depth" checked>
+                        <span class="setting-value">Improves Z accuracy</span>
+                    </div>
+                </div>
             </div>
 
             <button id="btn-start" class="btn btn-primary">Start Camera</button>
@@ -52,7 +59,26 @@
         <p id="calibration-progress" class="overlay-text">Click each point to calibrate</p>
     </section>
 
-    <!-- Screen 3: Accuracy Test -->
+    <!-- Screen 3: Depth Calibration -->
+    <section id="screen-depth-cal" class="screen hidden">
+        <div id="depth-cal-container"></div>
+        <div id="depth-distance-hud" class="depth-hud">
+            <span id="depth-distance-label">Distance: --</span>
+            <div class="depth-bar-track">
+                <div id="depth-bar-fill" class="depth-bar-fill"></div>
+                <div id="depth-bar-marker" class="depth-bar-marker"></div>
+            </div>
+            <div class="depth-bar-labels">
+                <span>Closer</span>
+                <span>Normal</span>
+                <span>Farther</span>
+            </div>
+        </div>
+        <p id="depth-cal-instruction" class="overlay-text">Lean closer to the screen and click the point</p>
+        <p id="depth-cal-progress" class="overlay-text" style="bottom: 1rem;">0 / 0</p>
+    </section>
+
+    <!-- Screen 4: Accuracy Test -->
     <section id="screen-accuracy" class="screen hidden">
         <div class="screen-content">
             <div id="accuracy-dot" class="center-dot"></div>
