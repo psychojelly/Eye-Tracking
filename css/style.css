@@ -1,0 +1,360 @@
+/* ── Reset & Base ── */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e0;
+}
+
+/* ── Screen Management ── */
+.screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease;
+}
+
+.screen.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.screen.active {
+    opacity: 1;
+}
+
+.screen-content {
+    text-align: center;
+    max-width: 560px;
+    padding: 2rem;
+}
+
+/* ── Typography ── */
+h1 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.instructions {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    color: #b0b0b0;
+}
+
+.requirements {
+    text-align: left;
+    list-style: none;
+    margin-bottom: 2rem;
+}
+
+.requirements li {
+    padding: 0.4rem 0;
+    color: #999;
+    font-size: 0.95rem;
+}
+
+.requirements li::before {
+    content: "\2022";
+    color: #4a9eff;
+    font-weight: bold;
+    margin-right: 0.6rem;
+}
+
+/* ── Buttons ── */
+.btn {
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn-primary {
+    background: #4a9eff;
+    color: #fff;
+    padding: 0.85rem 2.5rem;
+}
+
+.btn-primary:hover {
+    background: #3a8eef;
+}
+
+.btn-secondary {
+    background: #2a2a35;
+    color: #ccc;
+    padding: 0.85rem 2.5rem;
+}
+
+.btn-secondary:hover {
+    background: #3a3a45;
+}
+
+.btn-small {
+    background: #1e1e28;
+    color: #aaa;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.85rem;
+}
+
+.btn-small:hover {
+    background: #2e2e38;
+    color: #ddd;
+}
+
+.button-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+/* ── Error Text ── */
+.error-text {
+    color: #ff5555;
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.warning-text {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #3a2a00;
+    color: #ffcc00;
+    padding: 0.6rem 1.4rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    z-index: 100;
+    transition: opacity 0.3s;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ── Calibration ── */
+#calibration-container {
+    position: fixed;
+    inset: 0;
+}
+
+.calibration-point {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #cc3333;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition: background 0.2s, box-shadow 0.2s;
+    z-index: 50;
+}
+
+.calibration-point:hover {
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+}
+
+/* Color progression: red -> orange -> yellow -> lime -> green */
+.calibration-point[data-clicks="1"] {
+    background: #cc6633;
+}
+
+.calibration-point[data-clicks="2"] {
+    background: #ccaa33;
+}
+
+.calibration-point[data-clicks="3"] {
+    background: #aacc33;
+}
+
+.calibration-point[data-clicks="4"] {
+    background: #44bb44;
+}
+
+.calibration-point[data-clicks="5"] {
+    background: #33cc33;
+    cursor: default;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+#calibration-progress {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    color: #888;
+    z-index: 51;
+}
+
+/* ── Overlay Text ── */
+.overlay-text {
+    position: fixed;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    color: #888;
+    z-index: 51;
+    white-space: nowrap;
+}
+
+/* ── Accuracy Test ── */
+.center-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #4a9eff;
+    margin: 0 auto 2rem;
+    box-shadow: 0 0 20px rgba(74, 158, 255, 0.5);
+}
+
+#accuracy-result {
+    margin-top: 1.5rem;
+}
+
+#accuracy-result p {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+/* ── Live Tracking ── */
+.tracking-header {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 100;
+}
+
+.tracking-content {
+    text-align: center;
+}
+
+.tracking-hint {
+    color: #555;
+    font-size: 0.95rem;
+}
+
+/* ── Gaze Cursor ── */
+#gaze-cursor {
+    position: fixed;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(74, 158, 255, 0.9) 0%, rgba(74, 158, 255, 0.1) 100%);
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    display: none;
+    transition: opacity 0.3s;
+}
+
+#gaze-cursor.dimmed {
+    opacity: 0.25;
+}
+
+/* ── WebGazer Overrides ── */
+#webgazerVideoFeed {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    width: 160px !important;
+    height: 120px !important;
+    border-radius: 8px !important;
+    opacity: 0.8 !important;
+    z-index: 1000 !important;
+}
+
+#webgazerFaceFeedbackBox {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    width: 160px !important;
+    height: 120px !important;
+    border-radius: 8px !important;
+    z-index: 1001 !important;
+}
+
+#webgazerFaceOverlay {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    width: 160px !important;
+    height: 120px !important;
+    z-index: 1001 !important;
+}
+
+#webgazerGazeDot {
+    display: none !important;
+}
+
+#webgazerVideoCanvas {
+    position: fixed !important;
+    top: 10px !important;
+    left: 10px !important;
+    width: 160px !important;
+    height: 120px !important;
+    border-radius: 8px !important;
+    z-index: 1000 !important;
+}
+
+/* ── Pupil Size HUD ── */
+.pupil-hud {
+    position: fixed;
+    bottom: 1.2rem;
+    left: 1.2rem;
+    background: rgba(20, 20, 30, 0.75);
+    backdrop-filter: blur(6px);
+    border-radius: 8px;
+    padding: 0.5rem 0.8rem;
+    z-index: 100;
+    min-width: 120px;
+}
+
+.pupil-hud #pupil-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #b0b0b0;
+    margin-bottom: 0.35rem;
+}
+
+.pupil-bar-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.pupil-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: #4a9eff;
+    border-radius: 3px;
+    transition: width 0.15s ease-out;
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Tracking Cursor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Gaze Cursor -->
+    <div id="gaze-cursor"></div>
+
+    <!-- Screen 1: Welcome -->
+    <section id="screen-welcome" class="screen active">
+        <div class="screen-content">
+            <h1>Eye Tracking Cursor</h1>
+            <p class="instructions">
+                This app uses your webcam to track your eye movements and control a cursor on screen.
+            </p>
+            <ul class="requirements">
+                <li>A working webcam is required</li>
+                <li>Good, even lighting on your face works best</li>
+                <li>Keep your head relatively still during use</li>
+                <li>You'll complete a short calibration before tracking begins</li>
+            </ul>
+            <button id="btn-start" class="btn btn-primary">Start Camera</button>
+            <p id="error-display" class="error-text hidden"></p>
+        </div>
+    </section>
+
+    <!-- Screen 2: Calibration -->
+    <section id="screen-calibration" class="screen hidden">
+        <div id="calibration-container"></div>
+        <p id="calibration-progress" class="overlay-text">Click each point 5 times</p>
+    </section>
+
+    <!-- Screen 3: Accuracy Test -->
+    <section id="screen-accuracy" class="screen hidden">
+        <div class="screen-content">
+            <div id="accuracy-dot" class="center-dot"></div>
+            <p id="accuracy-instruction" class="overlay-text">
+                Stare at the dot in the center for 5 seconds...
+            </p>
+            <div id="accuracy-result" class="hidden">
+                <p>Accuracy: <span id="accuracy-value">--</span>%</p>
+                <div class="button-group">
+                    <button id="btn-recalibrate" class="btn btn-secondary">Recalibrate</button>
+                    <button id="btn-continue" class="btn btn-primary">Continue</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screen 4: Live Tracking -->
+    <section id="screen-tracking" class="screen hidden">
+        <div class="tracking-header">
+            <button id="btn-recalibrate-tracking" class="btn btn-small">Recalibrate</button>
+            <button id="btn-toggle-video" class="btn btn-small">Toggle Video</button>
+        </div>
+        <p id="resize-warning" class="warning-text hidden">
+            Window resized — consider recalibrating for best accuracy.
+        </p>
+        <div class="tracking-content">
+            <p class="tracking-hint">Move your eyes around the screen. The blue dot follows your gaze.</p>
+        </div>
+        <div id="pupil-hud" class="pupil-hud hidden">
+            <span id="pupil-label">Pupil: --%</span>
+            <div class="pupil-bar-track">
+                <div id="pupil-bar-fill" class="pupil-bar-fill"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/webgazer@3.4.0/dist/webgazer.min.js"></script>
+    <script src="js/cursor.js"></script>
+    <script src="js/calibration.js"></script>
+    <script src="js/pupil.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

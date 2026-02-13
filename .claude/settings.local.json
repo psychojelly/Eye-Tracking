@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command:*)",
+      "Bash(dir:*)",
+      "WebFetch(domain:webgazer.cs.brown.edu)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:www.jsdelivr.com)",
+      "WebSearch",
+      "Bash(python -m http.server:*)",
+      "WebFetch(domain:blog.tensorflow.org)",
+      "WebFetch(domain:selvamsubbiah.com)",
+      "WebFetch(domain:medium.com)"
+    ]
+  }
+}
