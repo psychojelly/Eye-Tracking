@@ -128,7 +128,9 @@ const HeadPoseTracker = (function () {
         // Note: webcam mirrors X, so head moving right in video = head moving left.
         // WebGazer's coordinate space already accounts for mirroring, so we
         // apply the correction in the same direction as the detected shift.
-        var rawOffsetX = -(transX * SENSITIVITY_X + yawShift * SENSITIVITY_YAW);
+        // Webcam feed is mirrored, so X landmark movement is same direction as
+        // the user's head movement. Correction needs to follow, not oppose.
+        var rawOffsetX = transX * SENSITIVITY_X + yawShift * SENSITIVITY_YAW;
         var rawOffsetY = -(transY * SENSITIVITY_Y + pitchShift * SENSITIVITY_PITCH);
 
         // EMA smooth the offset
