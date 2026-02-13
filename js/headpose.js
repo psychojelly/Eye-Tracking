@@ -45,7 +45,8 @@ const HeadPoseTracker = (function () {
     var smoothOffsetX = 0;
     var smoothOffsetY = 0;
     var active = false;
-    var flipX = 1; // 1 or -1
+    var flipX = 1;  // 1 or -1
+    var flipY = 1;  // 1 or -1
 
     /**
      * Capture the current head pose as the reference (call after calibration).
@@ -128,7 +129,7 @@ const HeadPoseTracker = (function () {
         // Combine translation and rotation into a single offset.
         // flipX allows the user to toggle the correction direction at runtime.
         var rawOffsetX = flipX * (transX * SENSITIVITY_X + yawShift * SENSITIVITY_YAW);
-        var rawOffsetY = -(transY * SENSITIVITY_Y + pitchShift * SENSITIVITY_PITCH);
+        var rawOffsetY = flipY * (transY * SENSITIVITY_Y + pitchShift * SENSITIVITY_PITCH);
 
         // EMA smooth the offset
         smoothOffsetX = smoothOffsetX + SMOOTH_ALPHA * (rawOffsetX - smoothOffsetX);
@@ -192,9 +193,15 @@ const HeadPoseTracker = (function () {
 
     function toggleFlipX() {
         flipX *= -1;
-        smoothOffsetX = 0; // reset smooth state so it doesn't lurch
+        smoothOffsetX = 0;
         return flipX;
     }
 
-    return { captureReference, getOffset, reset, isActive, toggleFlipX };
+    function toggleFlipY() {
+        flipY *= -1;
+        smoothOffsetY = 0;
+        return flipY;
+    }
+
+    return { captureReference, getOffset, reset, isActive, toggleFlipX, toggleFlipY };
 })();
