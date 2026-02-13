@@ -1,10 +1,11 @@
 /**
- * Calibration — 9-point calibration grid and accuracy measurement.
+ * Calibration — configurable calibration grid and accuracy measurement.
  */
 const Calibration = (function () {
-    const CLICKS_REQUIRED = 5;
-    const GRID = [0.1, 0.5, 0.9]; // 10%, 50%, 90% of viewport
     const ACCURACY_DURATION = 5000; // ms
+
+    let clicksRequired = 5;
+    let grid = [0.1, 0.5, 0.9];
 
     let container = null;
     let progressEl = null;
@@ -13,19 +14,34 @@ const Calibration = (function () {
     let totalRequired = 0;
     let onCompleteCallback = null;
 
+    /**
+     * Configure calibration parameters before creating points.
+     * @param {number} gridSize  — number of rows/cols (3–5)
+     * @param {number} clicks    — clicks required per point (3–15)
+     */
+    function configure(gridSize, clicks) {
+        clicksRequired = clicks;
+        // Build evenly-spaced grid from 10% to 90%
+        grid = [];
+        for (let i = 0; i < gridSize; i++) {
+            grid.push(0.1 + (0.8 * i) / (gridSize - 1));
+        }
+    }
+
     function createPoints() {
         container = document.getElementById('calibration-container');
         progressEl = document.getElementById('calibration-progress');
         container.innerHTML = '';
         points = [];
         totalClicks = 0;
-        totalRequired = GRID.length * GRID.length * CLICKS_REQUIRED;
+        totalRequired = grid.length * grid.length * clicksRequired;
 
-        for (const yPct of GRID) {
-            for (const xPct of GRID) {
+        for (const yPct of grid) {
+            for (const xPct of grid) {
                 const pt = document.createElement('div');
                 pt.className = 'calibration-point';
                 pt.dataset.clicks = '0';
+                pt.dataset.required = String(clicksRequired);
                 pt.style.left = (xPct * 100) + '%';
                 pt.style.top = (yPct * 100) + '%';
 
@@ -43,11 +59,28 @@ const Calibration = (function () {
 
     function handlePointClick(pt) {
         const clicks = parseInt(pt.dataset.clicks, 10);
-        if (clicks >= CLICKS_REQUIRED) return;
+        if (clicks >= clicksRequired) return;
 
         const newClicks = clicks + 1;
         pt.dataset.clicks = String(newClicks);
         totalClicks++;
+
+        // Update color progression based on fraction complete
+        var frac = newClicks / clicksRequired;
+        if (newClicks >= clicksRequired) {
+            pt.style.background = '#33cc33';
+            pt.style.cursor = 'default';
+            pt.style.pointerEvents = 'none';
+            pt.style.opacity = '0.6';
+        } else if (frac > 0.75) {
+            pt.style.background = '#44bb44';
+        } else if (frac > 0.5) {
+            pt.style.background = '#aacc33';
+        } else if (frac > 0.25) {
+            pt.style.background = '#ccaa33';
+        } else {
+            pt.style.background = '#cc6633';
+        }
 
         updateProgress();
 
@@ -62,7 +95,7 @@ const Calibration = (function () {
 
     function updateProgress() {
         const completed = points.filter(
-            p => parseInt(p.dataset.clicks, 10) >= CLICKS_REQUIRED
+            p => parseInt(p.dataset.clicks, 10) >= clicksRequired
         ).length;
         progressEl.textContent = completed + ' / ' + points.length + ' points complete';
     }
@@ -121,5 +154,5 @@ const Calibration = (function () {
         onCompleteCallback = cb;
     }
 
-    return { createPoints, measureAccuracy, collectGaze, reset, setOnComplete };
+    return { configure, createPoints, measureAccuracy, collectGaze, reset, setOnComplete };
 })();

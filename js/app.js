@@ -26,10 +26,33 @@
     const pupilLabel = document.getElementById('pupil-label');
     const pupilBarFill = document.getElementById('pupil-bar-fill');
 
+    // ── Settings controls ──
+    const settingGrid = document.getElementById('setting-grid');
+    const settingGridLabel = document.getElementById('setting-grid-label');
+    const settingClicks = document.getElementById('setting-clicks');
+    const settingClicksLabel = document.getElementById('setting-clicks-label');
+
     let currentScreen = 'welcome';
     let nullGazeTimer = null;
     let videoVisible = true;
     let resizeTimeout = null;
+
+    // ── Settings GUI ──
+    function updateGridLabel() {
+        var n = settingGrid.value;
+        settingGridLabel.textContent = n + ' x ' + n + ' (' + (n * n) + ' pts)';
+    }
+
+    function updateClicksLabel() {
+        settingClicksLabel.textContent = settingClicks.value;
+    }
+
+    settingGrid.addEventListener('input', updateGridLabel);
+    settingClicks.addEventListener('input', updateClicksLabel);
+
+    // Initialize labels
+    updateGridLabel();
+    updateClicksLabel();
 
     // ── HTTPS / localhost check ──
     function checkSecureContext() {
@@ -126,6 +149,14 @@
             nullGazeTimer = null;
             GazeCursor.undim();
         }
+
+        // Apply head pose correction if active
+        if (HeadPoseTracker.isActive()) {
+            var offset = HeadPoseTracker.getOffset();
+            x += offset.x;
+            y += offset.y;
+        }
+
         GazeCursor.update(x, y);
         // Feed data to accuracy measurement if collecting
         Calibration.collectGaze(x, y);
@@ -158,12 +189,21 @@
     function startCalibration() {
         showScreen('calibration');
         PupilTracker.stop();
+        HeadPoseTracker.reset();
         pupilHud.classList.add('hidden');
         GazeCursor.hide();
         setVideoVisible(false); // Hide video so it doesn't block calibration points
+
+        // Apply user settings
+        var gridSize = parseInt(settingGrid.value, 10);
+        var clicks = parseInt(settingClicks.value, 10);
+        Calibration.configure(gridSize, clicks);
+
         Calibration.reset();
         Calibration.createPoints();
         Calibration.setOnComplete(function () {
+            // Capture head pose reference right after calibration completes
+            HeadPoseTracker.captureReference();
             startAccuracyTest();
         });
     }
@@ -223,6 +263,7 @@
     btnRecalibrate.addEventListener('click', function () {
         // Clear WebGazer training data and recalibrate
         webgazer.clearData();
+        HeadPoseTracker.reset();
         startCalibration();
     });
 
@@ -233,6 +274,7 @@
     btnRecalibrateTracking.addEventListener('click', function () {
         GazeCursor.hide();
         webgazer.clearData();
+        HeadPoseTracker.reset();
         startCalibration();
     });
 

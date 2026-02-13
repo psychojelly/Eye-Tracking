@@ -72,6 +72,61 @@ h1 {
     margin-right: 0.6rem;
 }
 
+/* ── Settings Panel ── */
+.settings-panel {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    margin-bottom: 1.8rem;
+}
+
+.settings-panel h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ccc;
+    margin-bottom: 1rem;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+}
+
+.setting-row:last-child {
+    margin-bottom: 0;
+}
+
+.setting-row label {
+    font-size: 0.9rem;
+    color: #999;
+    flex-shrink: 0;
+    margin-right: 1rem;
+}
+
+.setting-control {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.setting-control input[type="range"] {
+    width: 120px;
+    accent-color: #4a9eff;
+    cursor: pointer;
+}
+
+.setting-value {
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    font-weight: 600;
+    min-width: 90px;
+    text-align: right;
+}
+
 /* ── Buttons ── */
 .btn {
     border: none;
@@ -173,29 +228,8 @@ h1 {
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
 }
 
-/* Color progression: red -> orange -> yellow -> lime -> green */
-.calibration-point[data-clicks="1"] {
-    background: #cc6633;
-}
-
-.calibration-point[data-clicks="2"] {
-    background: #ccaa33;
-}
-
-.calibration-point[data-clicks="3"] {
-    background: #aacc33;
-}
-
-.calibration-point[data-clicks="4"] {
-    background: #44bb44;
-}
-
-.calibration-point[data-clicks="5"] {
-    background: #33cc33;
-    cursor: default;
-    pointer-events: none;
-    opacity: 0.6;
-}
+/* Color progression is now applied dynamically in calibration.js
+   to support variable click counts */
 
 #calibration-progress {
     position: fixed;
