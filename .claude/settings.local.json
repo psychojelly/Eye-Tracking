@@ -12,7 +12,8 @@
       "Bash(python -m http.server:*)",
       "WebFetch(domain:blog.tensorflow.org)",
       "WebFetch(domain:selvamsubbiah.com)",
-      "WebFetch(domain:medium.com)"
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:gazerecorder.com)"
     ]
   }
 }
